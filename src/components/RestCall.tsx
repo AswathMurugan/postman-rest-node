@@ -8,6 +8,7 @@ const RestCall: React.FC = () => {
     const [response, setResponse] = useState(null);
     const [error, setError] = useState<string | null>(null);
     const [statusCode, setStatusCode] = useState<number | null>(null);
+    const [respHeader, setRespHeader] = useState<any>([{key: '', value: ''}]);
 
     const handleSend = async (method: string, url: string, headers: Record<string, string>, body: string) => {
         try {
@@ -17,11 +18,22 @@ const RestCall: React.FC = () => {
             const res = await axios({ method, url, headers, data: body });
             setResponse(res.data);
             setStatusCode(res.status)
+            const respHeader: { key: string; value: string }[] = Object.entries(res.headers).map(([key, value]) => ({
+                key,
+                value: value as string, // Cast value to string
+            }));
+            setRespHeader(respHeader);
         } catch (err: any) {
             console.log(err);
             setError(err.message);
-            setResponse(null);
+            setResponse(err.response.data);
             setStatusCode(err.status)
+
+            const respHeader: { key: string; value: string }[] = Object.entries(err.response.headers).map(([key, value]) => ({
+                key,
+                value: value as string, // Cast value to string
+            }));
+            setRespHeader(respHeader);
         }
     };
 
@@ -38,7 +50,8 @@ const RestCall: React.FC = () => {
             <ResponseViewer
                 response={response}
                 error={error}
-                statusCode={statusCode}/>
+                statusCode={statusCode}
+                respHeader={respHeader}/>
         </div>
     );
 };

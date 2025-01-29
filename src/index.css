@@ -21,6 +21,7 @@ code {
   background-color: #f7f7f7;
   margin: 0 auto;
   text-align: left;
+  height: 400px; /* Set the max height */
 }
 
 .request-row {
@@ -91,6 +92,8 @@ code {
 
 .headers-tab, .body-tab {
   margin-top: 20px;
+  max-height: 200px; /* Set the max height */
+  overflow-y: auto;
 }
 
 .header-row {

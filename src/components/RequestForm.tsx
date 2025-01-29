@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import axios from "axios";
+import {FiSettings} from "react-icons/fi";
 
 type RequestFormProps = {
     onSend: (method: string, url: string, headers: Record<string, string>, body: string) => void;
@@ -46,6 +47,12 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
 
     const [isModalOpen, setModalOpen] = useState(false);
     const [curlInput, setCurlInput] = useState("");
+
+    const [settingPopup, setSettingPopup] = useState(false);
+    const [settingPopupOptions, setSettingPopupOptions] = useState({
+        externalAuth: false,
+        offloadData: false,
+    });
 
     const handleImport = () => {
         console.log("cURL Command:", curlInput);
@@ -142,7 +149,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
     const handleProviderChange = (providerName: string) => {
         setSelectedProvider(providerName);
         setSelectedService('');
-        setHeaders((prevHeaders) => [...prevHeaders, { key: 'x-jiffy-connector-providerName', value: providerName }]);
+        addOrUpdateHeaders([{ key: 'x-jiffy-connector-providerName', value: providerName }]);
 
         // Fetch services for the selected provider
         const url = `${host}/platform/pam/tenant/${tenantName}/app/${appName}/inst/${appId}/connector?type=external-service&type=connector-implementation&providerName=${providerName}&update=true`;
@@ -165,11 +172,11 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
     };
 
 
-    const handleServiceChange = (serviceName: string) => {
+    const handleServiceChange = (serviceName: string, version: string) => {
         setSelectedService(serviceName);
-        setHeaders((prevHeaders) => [...prevHeaders,
+        addOrUpdateHeaders( [
             { key: 'x-jiffy-connector-serviceName', value: serviceName },
-            { key: 'x-jiffy-connector-version', value: "1.0.0" },
+            { key: 'x-jiffy-connector-version', value: version },
             { key: 'x-jiffy-connector-type', value: "external-service" },
             { key: 'x-jiffy-connector-ns', value: `${tenantId}.default` }
         ]);
@@ -259,7 +266,61 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
         setqueryParams(queryParams.filter((_, i) => i !== index));
     };
 
+    const addOrUpdateHeaders = (newHeaders: { key: string; value: string }[]) => {
+        setHeaders((prevHeaders) => {
+            const updatedHeaders = [...prevHeaders];
 
+            newHeaders.forEach((newHeader) => {
+                const existingHeaderIndex = updatedHeaders.findIndex(
+                    (header) => header.key === newHeader.key
+                );
+
+                if (existingHeaderIndex !== -1) {
+                    // Replace the existing header
+                    updatedHeaders[existingHeaderIndex] = newHeader;
+                } else {
+                    // Add a new header if the key doesn't exist
+                    updatedHeaders.push(newHeader);
+                }
+            });
+
+            return updatedHeaders;
+        });
+    };
+
+
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, checked } = e.target;
+        console.log(name, checked);
+        if(name === "externalAuth" && checked) {
+            addOrUpdateHeaders([
+                { key: 'x-jiffy-connector-auth-type', value: "internal" }
+            ]);
+        } else {
+            addOrUpdateHeaders([
+                { key: 'x-jiffy-connector-auth-type', value: "external" }
+            ]);
+        }
+        if(name === "offloadData" && checked) {
+            addOrUpdateHeaders([
+                { key: 'x-jiffy-connector-offload-data', value: "true" }
+            ]);
+        } else {
+            addOrUpdateHeaders([
+                { key: 'x-jiffy-connector-offload-data', value: "false" }
+            ]);
+        }
+        setSettingPopupOptions((prevOptions) => ({ ...prevOptions, [name]: checked }));
+    };
+
+    const togglePopup = () => setSettingPopup(!settingPopup);
+
+
+    // Function to get version by name
+    const getVersionByName = (service: Service[], serviceName: string) => {
+        const component = service.find(comp => comp.name === serviceName);
+        return component ? component.version : "";  // Return version if found, else null
+    };
 
 
 
@@ -282,7 +343,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
                     {selectedProvider && (
                         <select className="service-dropdown"
                                 value={selectedService}
-                                onChange={(e) => handleServiceChange(e.target.value)}
+                                onChange={(e) => handleServiceChange(e.target.value, getVersionByName(services, e.target.value))}
                                 disabled={!selectedProvider}
                         >
                             <option value="">Select a service</option>
@@ -293,6 +354,69 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
                             ))}
                         </select>
                     )}
+                    <div style={{
+                        padding: "5px",
+                        position: "relative",
+                        display: "inline-block" }}>
+                        {/* Settings Icon */}
+                        <FiSettings
+                            size={24}
+                            style={{ cursor: "pointer", color: "#007bff" }}
+                            onClick={togglePopup}
+                        />
+                        {/* Popup Window */}
+                        {settingPopup && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: "30px",
+                                    right: "0px",
+                                    width: "250px",
+                                    padding: "15px",
+                                    backgroundColor: "white",
+                                    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
+                                    borderRadius: "8px",
+                                    zIndex: 1000,
+                                }}
+                            >
+                                <h4 style={{ margin: "0 0 10px" }}>Settings</h4>
+                                <div>
+                                    <label style={{ display: "block", marginBottom: "8px" }}>
+                                        <input
+                                            type="checkbox"
+                                            name="externalAuth"
+                                            checked={settingPopupOptions.externalAuth}
+                                            onChange={handleCheckboxChange}
+                                        />
+                                        External Auth
+                                    </label>
+                                    <label style={{ display: "block", marginBottom: "8px" }}>
+                                        <input
+                                            type="checkbox"
+                                            name="offloadData"
+                                            checked={settingPopupOptions.offloadData}
+                                            onChange={handleCheckboxChange}
+                                        />
+                                        Offload Data to Jiffy Drive
+                                    </label>
+                                </div>
+                                <button
+                                    onClick={togglePopup}
+                                    style={{
+                                        marginTop: "10px",
+                                        padding: "5px 10px",
+                                        backgroundColor: "#007bff",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             <div className="request-row">
