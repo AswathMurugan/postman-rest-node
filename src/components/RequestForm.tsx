@@ -23,16 +23,22 @@ const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'];
 
 const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
     let host = `https://integrationtest.jiffy.ai`;
-    let appName = `orgtestapp`;
+    let appName = `axos-documents-api`;
     let tenantName = `apex-int-test-tenant`;
-    let appId = "f1797175-ee1e-4c5a-a293-12d9000a86f4";
+    let appId = "5d5ec379-1f7e-426d-a43b-eb4d2c06805f";
     let tenantId = "76851fa5-219c-4c7f-b39a-2a078b71b688";
     let userId = "30c27dfd-202c-4eea-9a82-6458867f9ce2";
 
     const [method, setMethod] = useState('GET');
     const [url, setUrl] = useState('');
     const [activeTab, setActiveTab] = useState('Headers');
-    const [headers, setHeaders] = useState([{ key: 'x-jiffy-app-id', value: appId }, {key: 'x-jiffy-tenant-id', value: tenantId }, {key: 'x-jiffy-user-id', value: userId}]);
+    const [headers, setHeaders] = useState([
+        {key: 'x-jiffy-app-id', value: appId },
+        {key: 'x-jiffy-tenant-id', value: tenantId },
+        {key: 'x-jiffy-user-id', value: userId},
+        {key: 'x-jiffy-connector-header-rewrite', value: "false"},
+        { key: 'x-jiffy-connector-auth-type', value: "platform" }
+    ]);
     const [queryParams, setqueryParams] = useState([{ key: '', value: '' }]);
     const [body, setBody] = useState('');
 
@@ -84,7 +90,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
                 const headers = data.args.header
                 headers.forEach((headerObj :  { [key: string]: string }) => {
                     const [key, value] = Object.entries(headerObj)[0];
-                    setHeaders((prevHeaders) => [...prevHeaders, { key: key, value: value }]);
+                    addOrUpdateHeaders([{ key: key, value: value }]);
                 });
 
                 setModalOpen(false); // Close the modal after import
@@ -294,18 +300,22 @@ const RequestForm: React.FC<RequestFormProps> = ({ onSend }) => {
         console.log(name, checked);
         if(name === "externalAuth" && checked) {
             addOrUpdateHeaders([
-                { key: 'x-jiffy-connector-auth-type', value: "internal" }
+                { key: 'x-jiffy-connector-auth-type', value: "external" },
+                {key: 'x-jiffy-connector-header-rewrite', value: "true"},
             ]);
-        } else {
+        }
+        if(name === "externalAuth" && !checked) {
             addOrUpdateHeaders([
-                { key: 'x-jiffy-connector-auth-type', value: "external" }
+                { key: 'x-jiffy-connector-auth-type', value: "platform" },
+                {key: 'x-jiffy-connector-header-rewrite', value: "false"},
             ]);
         }
         if(name === "offloadData" && checked) {
             addOrUpdateHeaders([
                 { key: 'x-jiffy-connector-offload-data', value: "true" }
             ]);
-        } else {
+        }
+        if(name === "offloadData" && !checked) {
             addOrUpdateHeaders([
                 { key: 'x-jiffy-connector-offload-data', value: "false" }
             ]);
